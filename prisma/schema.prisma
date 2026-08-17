@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workspaceMembers WorkspaceMember[]
+  sessions         Session[]
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Workspace {
+  id          String    @id @default(uuid())
+  name        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  members     WorkspaceMember[]
+  projects    Project[]
+  audioAssets AudioAsset[]
+  jobs        ProcessingJob[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid())
+  role        Role      @default(MEMBER) // OWNER, ADMIN, MEMBER
+  userId      String
+  workspaceId String
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+// Domain Models
+model Project {
+  id          String    @id @default(uuid())
+  name        String
+  workspaceId String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  jobs        ProcessingJob[]
+}
+
+model AudioAsset {
+  id          String    @id @default(uuid())
+  filename    String
+  storageKey  String    // Abstraction for local/S3 path
+  mimeType    String
+  sizeBytes   Int
+  duration    Float?
+  workspaceId String
+  createdAt   DateTime  @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  jobs        ProcessingJob[]
+}
+
+model ProcessingJob {
+  id            String    @id @default(uuid())
+  type          JobType   // STT_AI_TTS, TTS_ONLY
+  status        JobStatus // PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED
+  provider      String    // e.g., "openai", "mock"
+  error         String?
+  progress      Int       @default(0)
+  
+  workspaceId   String
+  projectId     String?
+  sourceAudioId String?   // For STT
+  
+  transcript    String?   @db.Text
+  aiAnalysis    Json?     // Structured insights
+  generatedAudioKey String? // Key for TTS output
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  startedAt     DateTime?
+  completedAt   DateTime?
+
+  workspace     Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project       Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  sourceAudio   AudioAsset? @relation(fields: [sourceAudioId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, createdAt])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum JobType {
+  STT_AI_TTS
+  TTS_ONLY
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
