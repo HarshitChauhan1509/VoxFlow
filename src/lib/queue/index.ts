@@ -22,6 +22,16 @@ export interface TTSJobPayload {
 }
 
 // Queues
-export const transcriptionQueue = new Queue<TranscriptionJobPayload>('transcription', { connection: redis });
-export const aiAnalysisQueue = new Queue<AIAnalysisJobPayload>('ai-analysis', { connection: redis });
-export const ttsQueue = new Queue<TTSJobPayload>('tts', { connection: redis });
+const defaultJobOptions = {
+  attempts: 3,
+  backoff: {
+    type: 'exponential',
+    delay: 2000,
+  },
+  removeOnComplete: true,
+  removeOnFail: false,
+};
+
+export const transcriptionQueue = new Queue<TranscriptionJobPayload>('transcription', { connection: redis, defaultJobOptions });
+export const aiAnalysisQueue = new Queue<AIAnalysisJobPayload>('ai-analysis', { connection: redis, defaultJobOptions });
+export const ttsQueue = new Queue<TTSJobPayload>('tts', { connection: redis, defaultJobOptions });
