@@ -40,11 +40,18 @@ export default function UploadPage() {
         setError(data.error || 'Upload failed');
       } else {
         setSuccess(true);
-        setFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+        // Start job automatically
+        const jobRes = await fetch('/api/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audioAssetId: data.audioAsset.id })
+        });
+        const jobData = await jobRes.json();
+        if (jobRes.ok) {
+          router.push(`/dashboard/jobs/${jobData.jobId}`);
+        } else {
+          setError(jobData.error || 'Failed to start job');
         }
-        // In a real app, you might redirect to the audio asset page or processing page
       }
     } catch (err) {
       setError('An unexpected error occurred during upload');
