@@ -31,8 +31,16 @@ export class LocalStorageProvider implements StorageProvider {
     return key;
   }
 
+  private getSafePath(key: string): string {
+    const resolvedPath = path.resolve(this.baseDir, key);
+    if (!resolvedPath.startsWith(path.resolve(this.baseDir))) {
+      throw new Error('Path traversal detected');
+    }
+    return resolvedPath;
+  }
+
   async download(key: string): Promise<Buffer> {
-    const filePath = path.join(this.baseDir, key);
+    const filePath = this.getSafePath(key);
     return await fs.readFile(filePath);
   }
 
@@ -42,7 +50,7 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async delete(key: string): Promise<void> {
-    const filePath = path.join(this.baseDir, key);
+    const filePath = this.getSafePath(key);
     await fs.unlink(filePath).catch((e) => {
       console.warn(`Failed to delete local file ${key}:`, e.message);
     });

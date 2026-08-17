@@ -14,21 +14,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id } = await params;
 
-  // Verify access to the job via workspace
-  const member = await db.workspaceMember.findFirst({
-    where: { userId: session.user.id },
-  });
-
-  if (!member) {
-    return new Response('Forbidden', { status: 403 });
-  }
-
-  const job = await db.processingJob.findFirst({
-    where: { id, workspaceId: member.workspaceId },
+  // Find the job first to know its workspace
+  const job = await db.processingJob.findUnique({
+    where: { id },
+    select: { id: true, workspaceId: true, status: true, error: true }
   });
 
   if (!job) {
     return new Response('Not Found', { status: 404 });
+  }
+
+  // Verify access to the job's workspace
+  const member = await db.workspaceMember.findUnique({
+    where: { userId_workspaceId: { userId: session.user.id, workspaceId: job.workspaceId } },
+  });
+
+  if (!member) {
+    return new Response('Forbidden', { status: 403 });
   }
 
   const stream = new ReadableStream({
@@ -50,23 +52,34 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const channel = `job-progress:${id}`;
       await subscriber.subscribe(channel);
 
+      // Heartbeat to prevent proxy timeouts
+      const interval = setInterval(() => {
+        try {
+          controller.enqueue(`: heartbeat\n\n`);
+        } catch {
+          // If enqueue fails, client disconnected
+          cleanup();
+        }
+      }, 15000);
+
+      const cleanup = () => {
+        clearInterval(interval);
+        subscriber.unsubscribe(channel);
+        subscriber.quit();
+        try { controller.close(); } catch {}
+      };
+
       subscriber.on('message', (chan, message) => {
         if (chan === channel) {
           controller.enqueue(`data: ${message}\n\n`);
           const parsed = JSON.parse(message);
           if (parsed.status === 'COMPLETED' || parsed.status === 'FAILED') {
-            subscriber.unsubscribe(channel);
-            subscriber.quit();
-            controller.close();
+            cleanup();
           }
         }
       });
 
-      req.signal.addEventListener('abort', () => {
-        subscriber.unsubscribe(channel);
-        subscriber.quit();
-        controller.close();
-      });
+      req.signal.addEventListener('abort', cleanup);
     },
   });
 
