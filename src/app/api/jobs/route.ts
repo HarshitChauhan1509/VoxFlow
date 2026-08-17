@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { transcriptionQueue } from '@/lib/queue';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+const createJobSchema = z.object({
+  audioAssetId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+});
 
 export async function POST(req: Request) {
   try {
@@ -11,11 +18,13 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { audioAssetId, workspaceId } = body;
+    const parsed = createJobSchema.safeParse(body);
 
-    if (!workspaceId) {
-      return NextResponse.json({ error: 'workspaceId required' }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid input', details: parsed.error.issues }, { status: 400 });
     }
+
+    const { audioAssetId, workspaceId } = parsed.data;
 
     const member = await db.workspaceMember.findUnique({
       where: {
@@ -62,7 +71,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, jobId: job.id }, { status: 201 });
 
   } catch (error) {
-    console.error('Job creation error:', error);
+    logger.error('Job creation error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

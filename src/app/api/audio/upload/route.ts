@@ -3,9 +3,15 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { storageProvider } from '@/domain/audio/local-storage-provider';
 import { WorkspaceRepository } from '@/domain/workspace/repository';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 const ALLOWED_MIME_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/x-m4a', 'audio/webm'];
+
+const uploadSchema = z.object({
+  workspaceId: z.string().uuid(),
+});
 
 export async function POST(req: Request) {
   try {
@@ -15,11 +21,14 @@ export async function POST(req: Request) {
     }
 
     const formData = await req.formData();
-    const workspaceId = formData.get('workspaceId') as string | null;
-
-    if (!workspaceId) {
-      return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+    const rawWorkspaceId = formData.get('workspaceId');
+    
+    const parsed = uploadSchema.safeParse({ workspaceId: rawWorkspaceId });
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Valid Workspace ID required' }, { status: 400 });
     }
+
+    const workspaceId = parsed.data.workspaceId;
 
     // Verify explicit workspace membership
     const member = await db.workspaceMember.findUnique({
@@ -66,7 +75,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, audioAsset }, { status: 201 });
   } catch (error) {
-    console.error('Audio upload error:', error);
+    logger.error('Audio upload error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -76,6 +76,8 @@ model AudioAsset {
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   jobs        ProcessingJob[]
+
+  @@index([workspaceId, createdAt])
 }
 
 model ProcessingJob {
@@ -105,6 +107,7 @@ model ProcessingJob {
 
   @@index([workspaceId, status])
   @@index([workspaceId, createdAt])
+  @@index([projectId])
 }
 
 enum Role {
