@@ -32,3 +32,22 @@ To avoid coupling to specific vendors, core domains are fronted by abstractions:
 - `AIProvider`: e.g. OpenAI GPT-4, Mock.
 - `TextToSpeechProvider`: e.g. OpenAI TTS, Mock.
 - `StorageProvider`: Local Disk, with future S3 extension.
+
+## Production Hardening
+VoxFlow implements the following enterprise-grade security and reliability patterns:
+- **Idempotency:** Background workers explicitly check job state before applying side effects, preventing duplicate AI provider billing on retry.
+- **Strict Parsing:** All AI output is validated against Zod schemas ensuring structural integrity.
+- **Tenant Isolation:** The `WorkspaceRepository` abstracts database access to systematically prevent IDOR vulnerabilities.
+- **Secure Streaming:** SSE endpoints use Redis Pub/Sub combined with 15-second heartbeats and explicit connection lifecycle management.
+- **Path Traversal Protection:** The storage layer enforces `path.resolve()` bounding.
+
+## Architectural Decision Records (ADR)
+For historical context on technical decisions, please consult:
+- `ADR-001.md`: Monorepo vs Polyrepo
+- `ADR-002.md`: Database and ORM Selection
+- `ADR-003.md`: State Management
+- `ADR-004.md`: Tenant-Aware Repository Pattern
+- `ADR-005.md`: Resilient Background Processing with BullMQ
+- `ADR-006.md`: OpenAI Integration and Strict Schema Validation
+- `ADR-007.md`: Safe Local Storage and Traversal Prevention
+- `ADR-008.md`: Secure Server-Sent Events (SSE)
