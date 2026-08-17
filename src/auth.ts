@@ -11,8 +11,15 @@ const loginSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // PrismaAdapter is configured here to store User records and seamlessly support 
+  // future OAuth providers (Google, GitHub, etc.) which require database persistence.
   adapter: PrismaAdapter(db),
+  
+  // However, because we are currently using the Credentials provider, NextAuth mandates
+  // the 'jwt' session strategy. This means sessions are NOT persisted in the Session table.
+  // Instead, the JWT token holds the user ID and acts as the session context.
   session: { strategy: 'jwt' },
+  
   providers: [
     CredentialsProvider({
       name: 'Credentials',
