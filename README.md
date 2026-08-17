@@ -1,6 +1,6 @@
 # VoxFlow
 
-VoxFlow is a production-grade AI voice workspace built to demonstrate modern full-stack engineering, asynchronous background processing, tenant isolation, and AI-assisted development.
+VoxFlow is a production-oriented AI voice workspace built to demonstrate modern full-stack engineering, asynchronous background processing, tenant isolation, and AI-assisted development.
 
 ## Product Overview
 VoxFlow allows users to:
@@ -71,5 +71,5 @@ npm run test
 ## Security & Tenancy
 - Every resource is strictly scoped to a `Workspace`.
 - The database schema mandates `workspaceId` on jobs, audio assets, and projects.
-- `WorkspaceRepository` abstracts data access to prevent accidental cross-tenant queries.
+- Tenant-aware repository access centralizes workspace scoping and significantly reduces the risk of accidental cross-tenant data access.
 - Next.js middleware protects `/dashboard/*` routes.
