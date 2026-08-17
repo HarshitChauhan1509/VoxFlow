@@ -5,13 +5,18 @@ import { TranscriptionJobPayload, AIAnalysisJobPayload, TTSJobPayload, aiAnalysi
 import { MockSpeechToTextProvider } from './domain/stt/provider';
 import { MockAIProvider } from './domain/ai/provider';
 import { MockTextToSpeechProvider } from './domain/tts/provider';
+import { OpenAISTTProvider } from './domain/stt/openai-provider';
+import { OpenAIProvider } from './domain/ai/openai-provider';
+import { OpenAITTSProvider } from './domain/tts/openai-provider';
 import { storageProvider } from './domain/audio/local-storage-provider';
 
 console.log('Worker started. Listening for jobs...');
 
-const sttProvider = new MockSpeechToTextProvider();
-const aiProvider = new MockAIProvider();
-const ttsProvider = new MockTextToSpeechProvider();
+const useRealProviders = !!process.env.OPENAI_API_KEY;
+
+const sttProvider = useRealProviders ? new OpenAISTTProvider() : new MockSpeechToTextProvider();
+const aiProvider = useRealProviders ? new OpenAIProvider() : new MockAIProvider();
+const ttsProvider = useRealProviders ? new OpenAITTSProvider() : new MockTextToSpeechProvider();
 
 // Shared status updater
 async function updateJobStatus(jobId: string, workspaceId: string, status: any, error?: string) {
