@@ -79,11 +79,21 @@ export class WorkspaceRepository {
           },
         });
       },
-      update: (args: Prisma.ProcessingJobUpdateArgs) => {
-        // Enforce update only applies to this workspace
+      update: async (args: Prisma.ProcessingJobUpdateArgs) => {
+        // Enforce update only applies to this workspace safely
+        // Because Prisma `update` ignores non-unique fields in `where`, we must use updateMany or verify first.
+        const existing = await db.processingJob.findFirst({
+          where: { id: args.where.id, workspaceId: this.workspaceId },
+          select: { id: true }
+        });
+        
+        if (!existing) {
+          throw new Error('Record not found or not in workspace');
+        }
+
         return db.processingJob.update({
           ...args,
-          where: { ...args.where, workspaceId: this.workspaceId } as any, // TypeScript generic safety workaround
+          where: { id: existing.id }
         });
       }
       // ... etc.

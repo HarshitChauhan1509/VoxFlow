@@ -10,14 +10,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const member = await db.workspaceMember.findFirst({
-      where: { userId: session.user.id },
+    const body = await req.json();
+    const { audioAssetId, workspaceId } = body;
+
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'workspaceId required' }, { status: 400 });
+    }
+
+    const member = await db.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: session.user.id,
+          workspaceId: workspaceId,
+        }
+      },
     });
 
-    if (!member) return NextResponse.json({ error: 'No workspace' }, { status: 403 });
-
-    const body = await req.json();
-    const { audioAssetId } = body;
+    if (!member) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     if (!audioAssetId) {
       return NextResponse.json({ error: 'audioAssetId required' }, { status: 400 });

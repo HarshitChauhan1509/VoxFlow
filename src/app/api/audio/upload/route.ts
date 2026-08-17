@@ -14,13 +14,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Resolve workspace (grabbing the first one for simplicity in this implementation)
-    const member = await db.workspaceMember.findFirst({
-      where: { userId: session.user.id },
+    const formData = await req.formData();
+    const workspaceId = formData.get('workspaceId') as string | null;
+
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
+    }
+
+    // Verify explicit workspace membership
+    const member = await db.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: session.user.id,
+          workspaceId: workspaceId,
+        }
+      },
     });
 
     if (!member) {
-      return NextResponse.json({ error: 'No workspace found' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const workspaceRepo = new WorkspaceRepository(member.workspaceId);

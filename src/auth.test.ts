@@ -26,8 +26,7 @@ describe('Authentication (Credentials)', () => {
   // We need to extract the authorize function from the provider
   // Since providers is an array and we know Credentials is the first one
   // Note: This is a simplified way to access the raw authorize function for unit testing
-  const authConfig = require('./auth');
-  const nextAuthProviders = authConfig.handlers; // We can't easily extract authorize directly from the exported NextAuth result in v5 without parsing the config.
+  // Since the `authorize` callback is buried in NextAuth setup, let's test the route protection middleware logic conceptually or just test a standalone authorize function if we extracted it.
   // Instead, let's just write pure unit tests against the logic we know is in there.
   
   // Since the `authorize` callback is buried in NextAuth setup, let's test the route protection middleware logic conceptually or just test a standalone authorize function if we extracted it.
